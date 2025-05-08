@@ -1,0 +1,9 @@
+mcp:
+  servers:
+    filesystem:
+      command: "npx"
+      args: ["-y", "@modelcontextprotocol/server-filesystem", "~/sandbox"]
+
+openai:
+  # Secrets (API keys, etc.) are stored in an mcp_agent.secrets.yaml file which can be gitignored
+  default_model: gpt-4.1-nano
