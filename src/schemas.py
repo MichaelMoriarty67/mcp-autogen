@@ -1,5 +1,6 @@
 from pydantic import BaseModel
-from typing import Dict, List
+from typing import Dict, List, Optional
+from enum import Enum
 
 
 class ToolCredential(BaseModel):
@@ -28,3 +29,16 @@ class ToolCall(BaseModel):
 class ChatResponse(BaseModel):
     reply: str
     tool_calls: List[ToolCall]
+
+
+class ToolType(str, Enum):
+    NODE = "node"
+    PYTHON = "python"
+
+
+class ToolMetadata(BaseModel):
+    name: str
+    command: str
+    args: List[str]
+    description: Optional[str] = None
+    type: ToolType

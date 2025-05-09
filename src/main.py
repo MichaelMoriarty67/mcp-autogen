@@ -3,13 +3,12 @@ from typing import Dict
 from uuid import uuid4
 
 from agent_manager import AgentManager
+from tool_registry import ToolRegistry
 from schemas import StartAgentRequest, ChatRequest, ChatResponse
 from utils import openai_tool_call_parser
 
 from mcp_agent.app import MCPApp as mcp_app_raw
 from mcp_agent.workflows.llm.augmented_llm_openai import OpenAIAugmentedLLM
-
-TOOL_REGISTRY = ["filesystem"]
 
 app = FastAPI()
 
@@ -22,6 +21,9 @@ LLM_MAP = {
     "openai": OpenAIAugmentedLLM,
     # Add more LLMs here
 }
+
+tool_registry_path = "./mcp_agent.config.yaml"
+TOOL_REGISTRY = ToolRegistry(tool_registry_path)
 
 
 # === Startup MCP runtime ===
@@ -83,3 +85,8 @@ async def chat(req: ChatRequest):
 
     result = await manager.chat(req.message)
     return result
+
+
+@app.get("/tools/available")
+def get_available_tools():
+    return [tool.model_dump() for tool in TOOL_REGISTRY.list_tools()]
