@@ -4,8 +4,9 @@ from uuid import uuid4
 
 from agent_manager import AgentManager
 from tool_registry import ToolRegistry
-from schemas import StartAgentRequest, ChatRequest, ChatResponse
+from schemas import StartAgentRequest, ChatRequest, ChatResponse, AppMetadata
 from utils import openai_tool_call_parser
+from scrape import read_apps
 
 from mcp_agent.app import MCPApp as mcp_app_raw
 from mcp_agent.workflows.llm.augmented_llm_openai import OpenAIAugmentedLLM
@@ -90,3 +91,8 @@ async def chat(req: ChatRequest):
 @app.get("/tools/available")
 def get_available_tools():
     return [tool.model_dump() for tool in TOOL_REGISTRY.list_tools()]
+
+
+@app.get("/apps/available", response_model=list[AppMetadata])
+def get_available_apps():
+    return read_apps()

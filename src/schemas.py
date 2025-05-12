@@ -42,3 +42,14 @@ class ToolMetadata(BaseModel):
     args: List[str]
     description: Optional[str] = None
     type: ToolType
+
+
+class AppMetadata(BaseModel):
+    id: int
+    url: str
+    name: Optional[str] = None
+    overview: Optional[str] = None
+    detailed_description: Optional[str] = None
+
+    class Config:
+        from_attributes = True
