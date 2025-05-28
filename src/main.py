@@ -56,7 +56,10 @@ async def start_agent(req: StartAgentRequest):
         raise HTTPException(status_code=400, detail="Invalid LLM")
 
     # Validate tools
-    unknown_tools = [t.tool_name for t in req.tools if t.tool_name not in TOOL_REGISTRY]
+    all_tool_names = [t.name for t in TOOL_REGISTRY.list_tools()]
+    unknown_tools = [
+        t.tool_name for t in req.tools if t.tool_name not in all_tool_names
+    ]
     if unknown_tools:
         raise HTTPException(status_code=400, detail=f"Unknown tools: {unknown_tools}")
 

@@ -3,6 +3,7 @@ from mcp_agent.agents.agent import Agent, LLM
 from mcp_agent.workflows.llm.augmented_llm_openai import OpenAIAugmentedLLM
 from uuid import uuid4
 from schemas import ToolCall, ChatResponse
+from local_tools import add_new_tool
 
 
 class AgentManager:
@@ -34,6 +35,7 @@ class AgentManager:
             name="assistant",
             instruction=self.instruction,
             server_names=[tool["tool_name"] for tool in self.tools_with_credentials],
+            functions=[add_new_tool],
         )
 
         await self.agent.__aenter__()
