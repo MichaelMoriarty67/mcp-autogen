@@ -2,6 +2,6 @@
 .env
 
 /src/main_old.py
-/src/mcp_agents.secrets.yaml
+mcp_agents.secrets.yaml
 
 */__pycache__
