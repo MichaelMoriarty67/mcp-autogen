@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, Json, 
 from typing import Dict, List, Optional
 from enum import Enum
 
@@ -53,3 +53,27 @@ class AppMetadata(BaseModel):
 
     class Config:
         from_attributes = True
+
+
+class Tool(BaseModel):
+    name: str
+    description: str
+    parameters: Json
+
+
+class ToolCall(BaseModel):
+    name: str
+    arguments: Json
+    id: str
+
+
+class LLMRole(str, Enum):
+    USER = "user"
+    ASSISTANT = "assistant"
+    SYSTEM = "system"
+
+
+class LLMAgnosticMessage(BaseModel):
+    role: LLMRole
+    content: Optional[str] = None
+    tool_calls: Optional[List[ToolCall]] = None

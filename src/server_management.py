@@ -77,6 +77,60 @@ class MCPServer:
             print(f"Error listing tools for {self.name}: {e}")
             return []
 
+    def call_tool(self, tool_name, arguments=None):
+        """
+        Call a tool on this MCP server.
+
+        Args:
+            tool_name: Name of the tool to call
+            arguments: Dictionary of arguments to pass to the tool (optional)
+
+        Returns:
+            The result from the tool call, or None if there was an error
+        """
+        if not self._initialized:
+            if not self._initialize_connection():
+                return None
+
+        if arguments is None:
+            arguments = {}
+
+        try:
+            # Build headers with session ID
+            headers = {"Content-Type": "application/json", "Accept": "application/json"}
+            if self._session_id:
+                headers["mcp-session-id"] = self._session_id
+
+            # Send JSON-RPC request to call the tool
+            response = requests.post(
+                self.url,
+                json={
+                    "jsonrpc": "2.0",
+                    "method": "tools/call",
+                    "params": {"name": tool_name, "arguments": arguments},
+                    "id": 2,
+                },
+                headers=headers,
+                timeout=30,  # Longer timeout for tool execution
+            )
+            response.raise_for_status()
+
+            result = response.json()
+
+            # Extract result from the response
+            if "result" in result:
+                return result["result"]
+            elif "error" in result:
+                print(f"Tool call error: {result['error']}")
+                return None
+            else:
+                print(f"Unexpected response format: {result}")
+                return None
+
+        except requests.exceptions.RequestException as e:
+            print(f"Error calling tool {tool_name} on {self.name}: {e}")
+            return None
+
     def _initialize_connection(self) -> bool:
         """Initialize the MCP connection (must be called before using the server)."""
         try:
@@ -201,7 +255,7 @@ if __name__ == "__main__":
         print(f"    URL: {server.url}")
         print(f"    PID: {server.pid}")
         print(f"    Running: {server.is_running}")
-        print(f"    First tool avail: {server.list_tools()[0]}")
+        print(f"    Available tools: {[t['name'] for t in server.list_tools()]}")
 
     # Do some work...
     print("\nServers running. Press Ctrl+C to stop...")
