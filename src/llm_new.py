@@ -1,8 +1,9 @@
-from schemas import Tool, LLMAgnosticMessage
+from schemas import Tool, LLMAgnosticMessage, ToolCall, LLMRole
 from typing import List, Optional, TypeVar, Generic
 from abc import ABC, abstractmethod
 from openai import OpenAI
 from openai.types.chat import ChatCompletionMessageParam
+from openai.types.responses import Response
 
 # this will manage the llm and its history
 
@@ -87,15 +88,18 @@ class App:
 
 
 LLMMessageType = TypeVar("LLMMessageType")
+LLMResponseType = TypeVar("LLMResponseType")
 
 
-class BaseLLM(ABC, Generic[LLMMessageType]):
+class BaseLLM(ABC, Generic[LLMMessageType, LLMResponseType]):
     def __init__(self, model_name: str, api_key: Optional[str] = None):
         self.api_key = api_key
         self.model_name = model_name
 
     @abstractmethod
-    def generate(self, messages: List[LLMAgnosticMessage]) -> LLMAgnosticMessage:
+    def generate(
+        self, messages: List[LLMAgnosticMessage], **kwargs
+    ) -> LLMAgnosticMessage:
         pass
 
     @abstractmethod
@@ -105,18 +109,23 @@ class BaseLLM(ABC, Generic[LLMMessageType]):
         pass
 
     @abstractmethod
-    def convert_back(self) -> List[LLMAgnosticMessage]:
+    def convert_back(self, response: LLMResponseType) -> LLMAgnosticMessage:
         pass
 
 
-class OpenAILLM(BaseLLM[ChatCompletionMessageParam]):
+class OpenAILLM(BaseLLM[ChatCompletionMessageParam, Response]):
     def __init__(self, model_name: str = "gpt-5-nano", api_key: str | None = None):
         super().__init__(model_name, api_key)
         self.client = OpenAI(api_key=api_key)
 
-    def generate(self, messages: List[LLMAgnosticMessage]) -> LLMAgnosticMessage:
+    def generate(
+        self, messages: List[LLMAgnosticMessage], **kwargs
+    ) -> LLMAgnosticMessage:
         openai_messages = self.convert_messages(messages)
-        response = self.client.responses.create(input=openai_messages)
+        openai_response = self.client.responses.create(input=openai_messages, **kwargs)
+
+        agnostic_response = self.convert_back(openai_response)
+        return agnostic_response
 
     def convert_messages(
         self, messages: List[LLMAgnosticMessage]
@@ -147,6 +156,12 @@ class OpenAILLM(BaseLLM[ChatCompletionMessageParam]):
             new_msgs.append(new_msg)
 
         return new_msgs
+
+    def convert_back(self, response: Response) -> LLMAgnosticMessage:
+        # loop through response.ouputs. Figure out each
+        # ouput type. If message, thats content. If
+        # function call, add to list of tool calls
+        pass
 
 
 class Agent:
