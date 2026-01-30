@@ -6,3 +6,4 @@ openai
 pyyaml
 uv
 mcp-proxy
+python-dotenv

@@ -5,6 +5,11 @@ from openai import OpenAI
 from openai.types.chat import ChatCompletionMessageParam
 from openai.types.responses import Response
 
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
+
 # this will manage the llm and its history
 
 
@@ -122,7 +127,10 @@ class OpenAILLM(BaseLLM[ChatCompletionMessageParam, Response]):
         self, messages: List[LLMAgnosticMessage], **kwargs
     ) -> LLMAgnosticMessage:
         openai_messages = self.convert_messages(messages)
-        openai_response = self.client.responses.create(input=openai_messages, **kwargs)
+        print(openai_messages)
+        openai_response = self.client.responses.create(
+            input=openai_messages, model=self.model_name, **kwargs
+        )
 
         agnostic_response = self.convert_back(openai_response)
         return agnostic_response
@@ -158,20 +166,41 @@ class OpenAILLM(BaseLLM[ChatCompletionMessageParam, Response]):
         return new_msgs
 
     def convert_back(self, response: Response) -> LLMAgnosticMessage:
-        # loop through response.ouputs. Figure out each
-        # ouput type. If message, thats content. If
-        # function call, add to list of tool calls
-        pass
+        agnostic_res = LLMAgnosticMessage(role=LLMRole.ASSISTANT)
+
+        for res in response.output:
+            if res.type == "message":
+                agnostic_res.content = res.content[0].text
+
+            elif res.type == "function_call":
+                if not agnostic_res.tool_calls:
+                    agnostic_res.tool_calls = []
+
+                agnostic_tc = ToolCall(res.name, res.arguments, res.id)
+                agnostic_res.tool_calls.append(agnostic_tc)
+
+        return agnostic_res
 
 
 class Agent:
-    def __init__(self, system_msg):
-        self.history: List[LLMAgnosticMessage] = []
-        self.apps = []
-        self.system_message = system_msg
+    def __init__(self, system_msg, llm: BaseLLM):
+        self.system_message = LLMAgnosticMessage(
+            role=LLMRole.SYSTEM, content=system_msg
+        )
+        self.history: List[LLMAgnosticMessage] = [self.system_message]
 
-    def generate(self, prompt: str):
-        pass
+        self.llm = llm
+        self.apps = []
+
+    def generate(self, prompt: str) -> LLMAgnosticMessage:
+        user_msg = LLMAgnosticMessage(role=LLMRole.USER, content=prompt)
+
+        self.history.append(user_msg)
+
+        response = self.llm.generate(self.history)
+        self.history.append(response)
+
+        return response
 
     def add_app(self, app: App):
         self.apps.append(app)
@@ -185,3 +214,13 @@ class Agent:
 
         print(f"App '{name}' not found")
         return False
+
+
+if __name__ == "__main__":
+    api_key = os.getenv("OPENAI_API_KEY")
+    llm = OpenAILLM(api_key=api_key)
+
+    agent = Agent("Your name is Sparky.", llm)
+
+    response = agent.generate("Hey, what's your name?")
+    print(response)
